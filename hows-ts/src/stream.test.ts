@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { newUnboundedBufferedReadableStream } from './stream.ts'
 
-function bytes(value: string): Uint8Array {
+function bytes(value: string): Uint8Array<ArrayBuffer> {
 	return new TextEncoder().encode(value)
 }
 

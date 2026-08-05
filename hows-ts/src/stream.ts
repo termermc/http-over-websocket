@@ -3,7 +3,7 @@ export type BufferedReadableStreamOptions = {
 }
 
 export type BufferedReadableStreamController = {
-	enqueue: (chunk: Uint8Array) => void
+	enqueue: (chunk: Uint8Array<ArrayBuffer>) => void
 	close: () => void
 	error: (err?: unknown) => void
 	get state(): 'readable' | 'closed' | 'errored' | 'canceled'
@@ -11,12 +11,12 @@ export type BufferedReadableStreamController = {
 
 export function newUnboundedBufferedReadableStream(
 	options: BufferedReadableStreamOptions = {},
-): [ReadableStream<Uint8Array>, BufferedReadableStreamController] {
-	let controller!: ReadableStreamDefaultController<Uint8Array>
+): [ReadableStream<Uint8Array<ArrayBuffer>>, BufferedReadableStreamController] {
+	let controller!: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>
 
 	let state: 'readable' | 'closed' | 'errored' | 'canceled' = 'readable'
 
-	const stream = new ReadableStream<Uint8Array>({
+	const stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
 		start(c) {
 			controller = c
 		},

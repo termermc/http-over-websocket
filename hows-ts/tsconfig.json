@@ -22,7 +22,6 @@
 		"allowJs": true,
 		"checkJs": true,
 		"allowImportingTsExtensions": true,
-		"lib": ["ESNext"],
 		"types": ["node"]
 	},
 	"files": ["index"],

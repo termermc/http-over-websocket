@@ -23,6 +23,7 @@ type Frame struct {
 }
 
 type FrameRequest struct {
+	Method  string     `json:"m"`
 	Uri     string     `json:"u"`
 	Headers [][]string `json:"h"`
 }

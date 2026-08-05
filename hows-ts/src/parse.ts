@@ -25,6 +25,23 @@ export const FrameType = {
 	END: 'e',
 } as const
 
+const httpMethods = [
+	'GET',
+	'HEAD',
+	'POST',
+	'PUT',
+	'DELETE',
+	'CONNECT',
+	'OPTIONS',
+	'TRACE',
+	'PATCH',
+] as const
+
+/**
+ * A valid HTTP method.
+ */
+export type HttpMethod = typeof httpMethods[number]
+
 /**
  * Types of HoWS frames.
  */
@@ -39,11 +56,16 @@ export type Header = [string, string]
  * A HoWS frame.
  */
 export type Frame = {
-	requestId: BigInt
+	requestId: bigint
 } & (
 	| {
 			type: 'q'
 			request: {
+				/**
+				 * The request method.
+				 */
+				m: HttpMethod
+
 				/**
 				 * The request URI.
 				 */
@@ -89,28 +111,16 @@ export type Frame = {
 	  }
 )
 
-/**
- * Converts an unsigned little-endian Uint8Array to a BigInt.
- */
-export function littleEndianToBigInt(bytes: Uint8Array): bigint {
-	let res = 0n
-
-	for (let i = bytes.length - 1; i >= 0; i--) {
-		res = (res << 8n) | BigInt(bytes[i]!)
-	}
-
-	return res
-}
-
 const minMsgLen = 1 + 8
 
 const utf8Decoder = new TextDecoder('utf-8')
+const utf8Encoder = new TextEncoder()
 
 /**
- * Like {@link parseFrame}, but uses an {@link ArrayBufferLike}.
+ * Like {@link decodeFrame}, but uses an {@link ArrayBufferLike}.
  */
 function parseFrameArrayBuffer(buf: ArrayBufferLike) {
-	return parseFrame(new Uint8Array(buf))
+	return decodeFrame(new Uint8Array(buf))
 }
 
 // TODO Write benchmark for JSON version and binary version, and see which one performs better in V8
@@ -129,12 +139,12 @@ function validateHeaders(h: any, frameType: string, label: string) {
 }
 
 /**
- * Parses a HoWS frame.
+ * Decodes a HoWS frame.
  * @param buf The raw frame buffer.
- * @returns The parsed frame.
+ * @returns The decoded frame.
  * @throws {TypeError} If the buffer is not a valid HoWS frame.
  */
-function parseFrame(buf: Uint8Array): Frame {
+export function decodeFrame(buf: Uint8Array<ArrayBufferLike>): Frame {
 	if (buf.byteLength < minMsgLen) {
 		throw new TypeError(
 			`buffer length is ${buf.byteLength} which is less than the minimum valid length of ${minMsgLen}`,
@@ -142,20 +152,30 @@ function parseFrame(buf: Uint8Array): Frame {
 	}
 
 	const type = String.fromCodePoint(buf[0]!) as FrameType
-	const reqId = littleEndianToBigInt(buf.slice(1))
+	const reqId = new DataView(buf.buffer).getBigInt64(1, true)
 
 	if (type === FrameType.BODY) {
 		return {
 			type: FrameType.BODY,
 			requestId: reqId,
-			buffer: buf.slice(2),
+			buffer: new Uint8Array(buf.subarray(2)),
 		}
 	}
 
-	const json = JSON.parse(utf8Decoder.decode(buf.slice(2)))
+	const json = JSON.parse(utf8Decoder.decode(buf.subarray(minMsgLen)))
 
 	switch (type) {
 		case FrameType.REQUEST:
+			if (typeof json.m !== 'string') {
+				throw TypeError(
+					`frame type "${FrameType.REQUEST}" expects string m`,
+				)
+			}
+			if (!httpMethods.includes(json.m)) {
+				throw TypeError(
+					`frame type "${FrameType.REQUEST}" expects string m to be a valid HTTP method`,
+				)
+			}
 			if (typeof json.u !== 'string') {
 				throw TypeError(
 					`frame type "${FrameType.REQUEST}" expects string u`,
@@ -204,4 +224,41 @@ function parseFrame(buf: Uint8Array): Frame {
 				`frame type "${type}" was not recognized; is the buffer not a HoWS frame?`,
 			)
 	}
+}
+
+/**
+ * Encodes a frame to a buffer.
+ * @param frame The HoWS frame to encode.
+ * @returns The encoded frame buffer.
+ */
+export function encodeFrame(frame: Frame): Uint8Array<ArrayBuffer> {
+	if (frame.type === FrameType.BODY) {
+		const buf = new Uint8Array(minMsgLen + frame.buffer.length)
+		buf[0] = FrameType.BODY.codePointAt(0)!
+		new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
+		for (let i = 0; i < frame.buffer.length; i++) {
+			buf[i + minMsgLen] = frame.buffer[i]!
+		}
+		return buf
+	}
+
+	let json: string
+	switch (frame.type) {
+		case FrameType.REQUEST:
+			json = JSON.stringify(frame.request)
+			break
+		case FrameType.RESPONSE:
+			json = JSON.stringify(frame.response)
+			break
+		case FrameType.END:
+			json = JSON.stringify(frame.end)
+			break
+	}
+
+	const buf = new Uint8Array(minMsgLen + json.length)
+	buf[0] = frame.type.codePointAt(0)!
+	new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
+	utf8Encoder.encodeInto(json, buf.subarray(minMsgLen))
+
+	return buf
 }

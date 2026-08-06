@@ -116,13 +116,6 @@ const minMsgLen = 1 + 8
 const utf8Decoder = new TextDecoder('utf-8')
 const utf8Encoder = new TextEncoder()
 
-/**
- * Like {@link decodeFrame}, but uses an {@link ArrayBufferLike}.
- */
-function parseFrameArrayBuffer(buf: ArrayBufferLike) {
-	return decodeFrame(new Uint8Array(buf))
-}
-
 // TODO Write benchmark for JSON version and binary version, and see which one performs better in V8
 
 function validateHeaders(h: any, frameType: string, label: string) {

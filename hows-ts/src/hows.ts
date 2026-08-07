@@ -118,7 +118,9 @@ export class Hows {
 
 		// Try to reconnect.
 		setTimeout(this.#connect.bind(this), this.#openDelay)
-		this.#openDelay += 250
+		if (this.#openDelay < 10_000) {
+			this.#openDelay += 250
+		}
 	}
 
 	/**
@@ -156,7 +158,7 @@ export class Hows {
 			req = new Request(input, requestInit)
 		}
 
-		if (url.host !== window.location.host) {
+		if (url.host !== this.#wsUrlParsed.host) {
 			throw new TypeError(`cannot use HoWS fetch with a URL whose host differs from the WebSocket host`)
 		}
 

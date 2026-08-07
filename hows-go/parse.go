@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"slices"
+	"strings"
 )
 
 // FrameType is a HoWS frame type.
@@ -67,6 +70,28 @@ type FrameEnd struct {
 	Trailers [][]string `json:"t"`
 }
 
+func checkHeaders(headers [][]string) bool {
+	for _, tuple := range headers {
+		if len(tuple) != 2 {
+			return false
+		}
+	}
+
+	return true
+}
+
+var validMethods = []string{
+	"GET",
+	"HEAD",
+	"POST",
+	"PUT",
+	"DELETE",
+	"CONNECT",
+	"OPTIONS",
+	"TRACE",
+	"PATCH",
+}
+
 const minFrameLen = 1 + 8
 
 // ErrInvalidFrame is returned by DecodeFrame when the buffer is not a valid HoWS frame.
@@ -74,6 +99,7 @@ var ErrInvalidFrame = errors.New("invalid HoWS frame")
 
 // DecodeFrame decodes a HoWS frame.
 // Returns ErrInvalidFrame if the frame is invalid, or an error that json.Unmarshal returns if the JSON in it is invalid.
+// The returned frame and all its fields are guaranteed to be valid.
 func DecodeFrame(buf []byte) (f Frame, err error) {
 	if len(buf) < minFrameLen {
 		return f, err
@@ -82,24 +108,58 @@ func DecodeFrame(buf []byte) (f Frame, err error) {
 	f.Type = FrameType(buf[0])
 	f.RequestId = int64(binary.LittleEndian.Uint64(buf[1:]))
 
-	var jsonDst any
 	switch f.Type {
 	case FrameTypeRequest:
-		jsonDst = &f.Request
+		r := bytes.NewReader(buf[minFrameLen:])
+		err = json.NewDecoder(r).Decode(&f.Request)
+		if err != nil {
+			return f, err
+		}
+		if strings.HasPrefix(f.Request.Uri, "/") {
+			return f, ErrInvalidFrame
+		}
+		if slices.Contains(validMethods, f.Request.Method) {
+			return f, ErrInvalidFrame
+		}
+		if !checkHeaders(f.Request.Headers) {
+			return f, ErrInvalidFrame
+		}
+
+		return f, nil
 	case FrameTypeResponse:
-		jsonDst = &f.Response
+		r := bytes.NewReader(buf[minFrameLen:])
+		err = json.NewDecoder(r).Decode(&f.Response)
+		if err != nil {
+			return f, err
+		}
+		if f.Response.StatusCode < 200 || f.Response.StatusCode > 599 {
+			return f, ErrInvalidFrame
+		}
+		if f.Response.StatusMessage == "" {
+			f.Response.StatusMessage = http.StatusText(f.Response.StatusCode)
+		}
+		if !checkHeaders(f.Response.Headers) {
+			return f, ErrInvalidFrame
+		}
+
+		return f, nil
 	case FrameTypeBody:
 		f.Body = buf[minFrameLen:]
 		return f, nil
 	case FrameTypeEnd:
-		jsonDst = &f.End
+		r := bytes.NewReader(buf[minFrameLen:])
+		err = json.NewDecoder(r).Decode(&f.End)
+		if err != nil {
+			return f, err
+		}
+		if !checkHeaders(f.End.Trailers) {
+			return f, ErrInvalidFrame
+		}
+
+		return f, nil
 	default:
 		return f, ErrInvalidFrame
 	}
-
-	r := bytes.NewReader(buf[minFrameLen:])
-	err = json.NewDecoder(r).Decode(jsonDst)
-	return f, err
 }
 
 // EncodeFrame encodes a HoWS frame.

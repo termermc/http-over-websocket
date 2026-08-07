@@ -104,7 +104,7 @@ export type Frame = {
 	  }
 	| {
 			type: 'b'
-			body: Uint8Array<ArrayBuffer>
+			body: Uint8Array<ArrayBufferLike>
 	  }
 	| {
 			type: 'e'

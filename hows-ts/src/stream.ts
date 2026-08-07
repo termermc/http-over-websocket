@@ -15,7 +15,7 @@ export type BufferedReadableStreamController = {
 	/**
 	 * Enqueues a new chunk to the internal buffer.
 	 */
-	enqueue: (chunk: Uint8Array<ArrayBuffer>) => void
+	enqueue: (chunk: Uint8Array<ArrayBufferLike>) => void
 
 	/**
 	 * Closes the stream.
@@ -42,7 +42,7 @@ export type BufferedReadableStreamController = {
 export function newUnboundedBufferedReadableStream(
 	options: BufferedReadableStreamOptions = {},
 ): [ReadableStream<Uint8Array<ArrayBuffer>>, BufferedReadableStreamController] {
-	let controller!: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>
+	let controller!: ReadableStreamDefaultController<Uint8Array<ArrayBufferLike>>
 
 	let state: 'readable' | 'closed' | 'errored' | 'canceled' = 'readable'
 

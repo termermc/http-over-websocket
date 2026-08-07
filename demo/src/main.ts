@@ -1,36 +1,45 @@
 import './style.css'
 import { Hows } from 'hows'
 
-const host = window.location.hostname + ':5172'
+const consoleElem = document.getElementById('console') as HTMLPreElement
+
+function println(str: string) {
+	consoleElem.textContent += str + '\n'
+	requestAnimationFrame(() => {
+		document.documentElement.scrollTo({
+			top: document.body.scrollHeight,
+		})
+	})
+}
+
+const host = location.hostname + ':5172'
+const hostRoot = location.protocol + '//' + host
 const hows = new Hows(`ws://${host}/compat/hows`)
 
 window.fetch = hows.fetch.bind(hows)
 
-const consoleElem = document.createElement('textarea')
-consoleElem.readOnly = true
-consoleElem.style.position = 'fixed'
-consoleElem.style.top = '0'
-consoleElem.style.left = '0'
-consoleElem.style.width = '100vw'
-consoleElem.style.height = '100vh'
-document.body.appendChild(consoleElem)
-
-function println(str: string) {
-	consoleElem.textContent += str + '\n'
-}
-
 const utf8Decoder = new TextDecoder('utf-8')
 
-println('starting')
-const countRes = await fetch('/count')
-const reader = countRes.body!.getReader()
-while (true) {
-	const { done, value } = await reader.read()
-	if (value) {
-		println(utf8Decoder.decode(value))
+async function count(label: string) {
+	println(label + ': starting')
+	const countRes = await fetch(hostRoot + '/count')
+	const reader = countRes.body!.getReader()
+	while (true) {
+		const { done, value } = await reader.read()
+		if (value) {
+			println(label + ': ' + utf8Decoder.decode(value))
+		}
+		if (done) {
+			break
+		}
 	}
-	if (done) {
-		break
-	}
+	println(label + ': done')
 }
-println('done')
+
+const proms = new Array<Promise<void>>(26)
+for (let i = 0; i < 26; i++) {
+	proms[i] = count(String.fromCharCode(97 + i))
+}
+
+await Promise.all(proms)
+println("=== all done ===")

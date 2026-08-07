@@ -58,6 +58,7 @@ type reqState struct {
 }
 
 var _ http.ResponseWriter = (*reqState)(nil)
+var _ http.Flusher = (*reqState)(nil)
 
 func (r *reqState) Header() http.Header {
 	return r.resHeaders
@@ -98,6 +99,11 @@ func (r *reqState) unsafeWriteHeader(statusCode int) {
 
 	r.resMu.Lock()
 	r.resSent = true
+	// TODO If length isn't set or transfer encoding is set a certain way, do chunked encoding
+	// TODO Implement chunked decoding on the client
+	// TODO Is chunked encoding even necessary if writes are unbuffered and we control the server and the client?
+	// Maybe we need to implemented chunked decoding but not chunked encoding for flusher, in the case of handlers that
+	// do chunked encoding manually.
 	r.resMu.Unlock()
 }
 
@@ -110,6 +116,10 @@ func (r *reqState) WriteHeader(statusCode int) {
 	}
 
 	r.unsafeWriteHeader(statusCode)
+}
+
+func (r *reqState) Flush() {
+	// Flush is a no-op because writes aren't buffered.
 }
 
 // Hows is an adapter that can multiplex HTTP requests over a single WebSocket connection.

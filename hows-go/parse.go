@@ -118,7 +118,7 @@ func DecodeFrame(buf []byte) (f Frame, err error) {
 		if !strings.HasPrefix(f.Request.Uri, "/") {
 			return f, ErrInvalidFrame
 		}
-		if slices.Contains(validMethods, f.Request.Method) {
+		if !slices.Contains(validMethods, f.Request.Method) {
 			return f, ErrInvalidFrame
 		}
 		if !checkHeaders(f.Request.Headers) {

@@ -186,7 +186,7 @@ func EncodeFrame(f Frame) ([]byte, error) {
 		jsonSrc = &f.Response
 	case FrameTypeBody:
 		copy(raw[minFrameLen:], f.Body)
-		return raw, nil
+		return raw[:minFrameLen+len(f.Body)], nil
 	case FrameTypeEnd:
 		if f.End.Trailers == nil {
 			f.End.Trailers = [][]string{}

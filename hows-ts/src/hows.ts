@@ -53,7 +53,7 @@ export class Hows {
 					req.resProm.resolve(res)
 					break
 				case FrameType.BODY:
-					req.resBodyControl.enqueue(frame.buffer)
+					req.resBodyControl.enqueue(frame.body)
 					break
 				case FrameType.END:
 					this.#reqs.delete(frame.requestId)
@@ -190,7 +190,7 @@ export class Hows {
 					await writeWs(this.#ws, encodeFrame({
 						type: FrameType.BODY,
 						requestId: reqId,
-						buffer: buf.value,
+						body: buf.value,
 					}))
 				}
 				if (buf.done) {

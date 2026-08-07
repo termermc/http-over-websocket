@@ -1,5 +1,12 @@
 package hows
 
+import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+)
+
 // FrameType is a HoWS frame type.
 type FrameType byte
 
@@ -19,7 +26,29 @@ const (
 	FrameTypeEnd FrameType = 'e'
 )
 
+// Frame is a HoWS frame.
 type Frame struct {
+	// The frame's type.
+	Type FrameType
+
+	// The request's unique ID.
+	RequestId int64
+
+	// The request.
+	// Will be zero unless Type is FrameTypeRequest.
+	Request FrameRequest
+
+	// The response.
+	// Will be zero unless Type is FrameTypeResponse.
+	Response FrameResponse
+
+	// The body.
+	// Will be zero unless Type is FrameTypeBody.
+	Body []byte
+
+	// The end.
+	// Will be zero unless Type is FrameTypeEnd.
+	End FrameEnd
 }
 
 type FrameRequest struct {
@@ -36,4 +65,78 @@ type FrameResponse struct {
 
 type FrameEnd struct {
 	Trailers [][]string `json:"t"`
+}
+
+const minFrameLen = 1 + 8
+
+// ErrInvalidFrame is returned by DecodeFrame when the buffer is not a valid HoWS frame.
+var ErrInvalidFrame = errors.New("invalid HoWS frame")
+
+// DecodeFrame decodes a HoWS frame.
+// Returns ErrInvalidFrame if the frame is invalid, or an error that json.Unmarshal returns if the JSON in it is invalid.
+func DecodeFrame(buf []byte) (f Frame, err error) {
+	if len(buf) < minFrameLen {
+		return f, err
+	}
+
+	f.Type = FrameType(buf[0])
+	f.RequestId = int64(binary.LittleEndian.Uint64(buf[1:]))
+
+	var jsonDst any
+	switch f.Type {
+	case FrameTypeRequest:
+		jsonDst = &f.Request
+	case FrameTypeResponse:
+		jsonDst = &f.Response
+	case FrameTypeBody:
+		f.Body = buf[minFrameLen:]
+		return f, nil
+	case FrameTypeEnd:
+		jsonDst = &f.End
+	default:
+		return f, ErrInvalidFrame
+	}
+
+	r := bytes.NewReader(buf[minFrameLen:])
+	err = json.NewDecoder(r).Decode(jsonDst)
+	return f, err
+}
+
+// EncodeFrame encodes a HoWS frame.
+// Returns ErrInvalidFrame if the frame's type is invalid, or an error that json.Marshal returns if the JSON in it is
+// invalid.
+func EncodeFrame(f Frame) ([]byte, error) {
+	// Preallocate 2KiB.
+	// In my own tests, almost no HoWS-encoded request or response frames will be larger than this.
+	raw := make([]byte, 2048)
+	raw[0] = byte(f.Type)
+	binary.LittleEndian.PutUint64(raw[1:], uint64(f.RequestId))
+
+	var jsonSrc any
+	switch f.Type {
+	case FrameTypeRequest:
+		if f.Request.Headers == nil {
+			f.Request.Headers = [][]string{}
+		}
+		jsonSrc = &f.Request
+	case FrameTypeResponse:
+		if f.Response.Headers == nil {
+			f.Response.Headers = [][]string{}
+		}
+		jsonSrc = &f.Response
+	case FrameTypeBody:
+		copy(raw[minFrameLen:], f.Body)
+		return raw, nil
+	case FrameTypeEnd:
+		if f.End.Trailers == nil {
+			f.End.Trailers = [][]string{}
+		}
+		jsonSrc = &f.End
+	default:
+		return nil, ErrInvalidFrame
+	}
+
+	buf := bytes.NewBuffer(raw[minFrameLen:minFrameLen])
+	err := json.NewEncoder(buf).Encode(jsonSrc)
+	return raw[:minFrameLen+buf.Len()], err
 }

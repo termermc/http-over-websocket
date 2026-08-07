@@ -25,7 +25,10 @@ export const FrameType = {
 	END: 'e',
 } as const
 
-const httpMethods = [
+/**
+ * A list of all supported HTTP methods.
+ */
+export const httpMethods = [
 	'GET',
 	'HEAD',
 	'POST',
@@ -56,6 +59,9 @@ export type Header = [string, string]
  * A HoWS frame.
  */
 export type Frame = {
+	/**
+	 * The request's unique ID.
+	 */
 	requestId: bigint
 } & (
 	| {
@@ -98,7 +104,7 @@ export type Frame = {
 	  }
 	| {
 			type: 'b'
-			buffer: Uint8Array<ArrayBuffer>
+			body: Uint8Array<ArrayBuffer>
 	  }
 	| {
 			type: 'e'
@@ -115,8 +121,6 @@ const minMsgLen = 1 + 8
 
 const utf8Decoder = new TextDecoder('utf-8')
 const utf8Encoder = new TextEncoder()
-
-// TODO Write benchmark for JSON version and binary version, and see which one performs better in V8
 
 function validateHeaders(h: any, frameType: string, label: string) {
 	if (!Array.isArray(h)) {
@@ -151,7 +155,7 @@ export function decodeFrame(buf: Uint8Array<ArrayBufferLike>): Frame {
 		return {
 			type: FrameType.BODY,
 			requestId: reqId,
-			buffer: new Uint8Array(buf.subarray(2)),
+			body: new Uint8Array(buf.subarray(minMsgLen)),
 		}
 	}
 
@@ -226,11 +230,11 @@ export function decodeFrame(buf: Uint8Array<ArrayBufferLike>): Frame {
  */
 export function encodeFrame(frame: Frame): Uint8Array<ArrayBuffer> {
 	if (frame.type === FrameType.BODY) {
-		const buf = new Uint8Array(minMsgLen + frame.buffer.length)
+		const buf = new Uint8Array(minMsgLen + frame.body.length)
 		buf[0] = FrameType.BODY.codePointAt(0)!
 		new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
-		for (let i = 0; i < frame.buffer.length; i++) {
-			buf[i + minMsgLen] = frame.buffer[i]!
+		for (let i = 0; i < frame.body.length; i++) {
+			buf[i + minMsgLen] = frame.body[i]!
 		}
 		return buf
 	}

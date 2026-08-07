@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decodeFrame, encodeFrame, type Frame, FrameType } from './parse.ts'
+import { type Frame, FrameType } from './parse.ts'
 import { randomBigInt } from './util.ts'
+import { decodeFrameBin, encodeFrameBin } from './parse_bin.ts'
 
-test('encode then decode result matches original frame', () => {
+test('binary encode then decode result matches original frame', () => {
 	const frame: Frame = {
 		type: FrameType.REQUEST,
 		requestId: 11n,
@@ -16,17 +17,17 @@ test('encode then decode result matches original frame', () => {
 			],
 		},
 	}
-	const enc1 = encodeFrame(frame)
-	const dec1 = decodeFrame(enc1)
+	const enc1 = encodeFrameBin(frame)
+	const dec1 = decodeFrameBin(enc1)
 
 	assert.deepStrictEqual(frame, dec1)
 })
 
-test('JSON codec benchmark', () => {
+test('binary codec benchmark', () => {
 	const start = performance.now()
 
 	for (let i = 0; i < 1_000_000; i++) {
-		const encoded = encodeFrame({
+		const encoded = encodeFrameBin({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
 			request: {
@@ -39,7 +40,7 @@ test('JSON codec benchmark', () => {
 				]
 			}
 		})
-		decodeFrame(encoded)
+		decodeFrameBin(encoded)
 	}
 
 	const end = performance.now()
@@ -47,10 +48,10 @@ test('JSON codec benchmark', () => {
 	console.log(`took ${(end-start)/1_000}s`)
 })
 
-test('JSON decode benchmark', () => {
+test('binary decode benchmark', () => {
 	const start = performance.now()
 
-	const encoded = encodeFrame({
+	const encoded = encodeFrameBin({
 		type: FrameType.REQUEST,
 		requestId: randomBigInt(),
 		request: {
@@ -65,7 +66,7 @@ test('JSON decode benchmark', () => {
 	})
 
 	for (let i = 0; i < 1_000_000; i++) {
-		decodeFrame(encoded)
+		decodeFrameBin(encoded)
 	}
 
 	const end = performance.now()
@@ -73,11 +74,11 @@ test('JSON decode benchmark', () => {
 	console.log(`took ${(end-start)/1_000}s`)
 })
 
-test('JSON encode benchmark', () => {
+test('binary encode benchmark', () => {
 	const start = performance.now()
 
 	for (let i = 0; i < 1_000_000; i++) {
-		encodeFrame({
+		encodeFrameBin({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
 			request: {

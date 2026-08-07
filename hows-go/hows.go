@@ -2,6 +2,8 @@ package hows
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -99,11 +101,6 @@ func (r *reqState) unsafeWriteHeader(statusCode int) {
 
 	r.resMu.Lock()
 	r.resSent = true
-	// TODO If length isn't set or transfer encoding is set a certain way, do chunked encoding
-	// TODO Implement chunked decoding on the client
-	// TODO Is chunked encoding even necessary if writes are unbuffered and we control the server and the client?
-	// Maybe we need to implemented chunked decoding but not chunked encoding for flusher, in the case of handlers that
-	// do chunked encoding manually.
 	r.resMu.Unlock()
 }
 
@@ -133,7 +130,12 @@ type Hows struct {
 }
 
 // NewHows creates a new HoWS adapter that sends requests to the provided handler.
-func NewHows(handler http.Handler, acceptOpts *websocket.AcceptOptions) *Hows {
+func NewHows(handler http.Handler) *Hows {
+	return NewHowsWithOptions(handler, nil)
+}
+
+// NewHowsWithOptions is like NewHows, but allows you to customize the WebSocket accept options.
+func NewHowsWithOptions(handler http.Handler, acceptOpts *websocket.AcceptOptions) *Hows {
 	return &Hows{
 		inner:      handler,
 		acceptOpts: acceptOpts,
@@ -144,7 +146,10 @@ func NewHows(handler http.Handler, acceptOpts *websocket.AcceptOptions) *Hows {
 
 var _ http.Handler = (*Hows)(nil)
 
-var howsSubprotocols = []string{"hows"}
+const howsSubprotocol = "hows"
+
+var howsSubprotocols = []string{howsSubprotocol}
+var howsSubprotocolWrong = []byte(fmt.Sprintf(`only the %q subprotocol is allowed`, howsSubprotocol))
 
 func (h *Hows) handleReq(
 	ctx context.Context,
@@ -194,8 +199,8 @@ func (h *Hows) handleReq(
 	trailers := make(http.Header)
 	if contentLen < 1 {
 		if trlStr := reqHeaders.Get("Trailer"); trlStr != "" {
-			rawStrs := strings.Split(trlStr, ",")
-			for _, trl := range rawStrs {
+			rawStrs := strings.SplitSeq(trlStr, ",")
+			for trl := range rawStrs {
 				trailers[strings.TrimSpace(trl)] = nil
 			}
 		}
@@ -209,6 +214,9 @@ func (h *Hows) handleReq(
 	if err != nil {
 		panic("BUG: created invalid request: " + err.Error())
 	}
+	req.Proto = "HTTP/2"
+	req.ProtoMajor = 2
+	req.ProtoMinor = 0
 	req.Header = reqHeaders
 	req.ContentLength = contentLen
 	req.Trailer = trailers
@@ -236,6 +244,14 @@ func (h *Hows) handleReq(
 	go func() {
 		// Run request handler and finish response when it returns.
 		h.inner.ServeHTTP(state, req)
+
+		_ = state.reqBodyReader.Close()
+		_ = state.reqBodyWriter.Close()
+
+		// TODO If we haven't received the END frame from the client already, sent a cancel frame.
+		// TODO Do we need a flag on the cancel frame on whether we just want to stop receiving the body or whether the
+		// entire thing was canceled? It seems like a client sending cancel means the entire thing is canceled, whereas
+		// a server sending cancel could mean either "stop sending body" or just "I won't send you anything". Find out.
 
 		h.statesMu.Lock()
 		delete(h.states, frame.RequestId)
@@ -265,6 +281,12 @@ func (h *Hows) handleBody(frame Frame) {
 	for wrote < len(frame.Body) {
 		n, err := state.reqBodyWriter.Write(frame.Body[wrote:])
 		if err != nil {
+			if errors.Is(err, io.ErrClosedPipe) {
+				// Handler returned before reading full body.
+				// We can just ignore it.
+				return
+			}
+
 			return
 		}
 		wrote += n
@@ -279,8 +301,12 @@ func (h *Hows) handleEnd(frame Frame) {
 		return
 	}
 
+	// I believe it's correct to mutate the request's trailers here because request handlers shouldn't be concurrently
+	// reading a body and also reading trailers at the same time. I doubt there are any actual request handlers written
+	// in the wild that would violate this. I would lock if I could, but there's no lock to use on http.Request.
 	trailers := frameHeadersToHttpHeader(frame.End.Trailers)
 	state.req.Trailer = trailers
+
 	_ = state.reqBodyWriter.Close()
 }
 
@@ -295,6 +321,11 @@ func (h *Hows) ServeHTTP(wsWriter http.ResponseWriter, wsReq *http.Request) {
 	if err != nil {
 		wsWriter.WriteHeader(500)
 		_, _ = wsWriter.Write([]byte(err.Error()))
+		return
+	}
+	if conn.Subprotocol() != howsSubprotocols[0] {
+		wsWriter.WriteHeader(400)
+		_, _ = wsWriter.Write(howsSubprotocolWrong)
 		return
 	}
 

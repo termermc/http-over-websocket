@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/coder/websocket"
-	"github.com/termermc/http-over-websocket/hows-go"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/coder/websocket"
+	"github.com/termermc/http-over-websocket/hows-go"
 )
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 	mux.Handle("/", helloRoute)
 	mux.Handle("/count", countRoute)
 
-	compat := hows.NewHows(mux, &websocket.AcceptOptions{
+	compat := hows.NewHowsWithOptions(mux, &websocket.AcceptOptions{
 		OriginPatterns: []string{"*"},
 	})
 	mux.Handle("/compat/hows", compat)

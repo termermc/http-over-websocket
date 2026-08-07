@@ -154,7 +154,7 @@ export class Hows {
 			throw new TypeError(`cannot use HoWS fetch with a URL whose host differs from the WebSocket host`)
 		}
 
-		// TODO Support abort
+		// TODO Support abort, both when the abort signal is triggered and when a response body is prematurely closed.
 
 		const headers: Header[] = []
 		for (const [k, v] of req.headers) {

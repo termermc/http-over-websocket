@@ -86,14 +86,6 @@ export class Hows {
 
 			console.warn(`expected array buffer from WebSocket, but got ${typeof data}`)
 		})
-		ws.addEventListener('message', (e) => {
-			if (e.data instanceof ArrayBuffer) {
-				this.#onMessage(e.data)
-				return
-			}
-
-			console.warn(`received non-binary frame from WebSocket, got data type ${typeof e.data}`)
-		})
 		ws.addEventListener('open', this.#onOpen.bind(this))
 		ws.addEventListener('close', this.#onClose.bind(this))
 		ws.addEventListener('error', this.#onClose.bind(this))

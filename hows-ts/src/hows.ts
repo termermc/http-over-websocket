@@ -135,6 +135,7 @@ export class Hows {
 	 */
 	async fetch(input: string | URL | Request, requestInit?: RequestInit): Promise<Response> {
 		// Wait for WebSocket open.
+		debugger
 		await this.#openProm.promise
 
 		let url: URL

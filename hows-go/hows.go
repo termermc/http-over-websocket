@@ -190,12 +190,15 @@ func (h *Hows) handleReq(
 			}
 		}
 	}
-	req, _ := http.NewRequestWithContext(
+	req, err := http.NewRequestWithContext(
 		ctx,
 		fr.Method,
-		wsReq.URL.Scheme+"://"+wsReq.URL.Host+fr.Uri,
+		wsReq.URL.Scheme+wsReq.URL.Host+fr.Uri,
 		reqReader,
 	)
+	if err != nil {
+		panic("BUG: created invalid request: " + err.Error())
+	}
 	req.Header = reqHeaders
 	req.ContentLength = contentLen
 	req.Trailer = trailers

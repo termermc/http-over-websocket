@@ -17,8 +17,8 @@ type ReqState = {
 	resProm: PromiseWithResolvers<Response>
 }
 
-const errWebSocketClosed = new Error('HoWS WebSocket closed')
-const errAborted = new DOMException('The operation was aborted', 'AbortError')
+const errWebSocketClosed = () => new Error('HoWS WebSocket closed')
+const errAborted = () => new DOMException('The operation was aborted', 'AbortError')
 
 /**
  * An implementation of W3C fetch multiplexed using a WebSocket connection.
@@ -77,8 +77,8 @@ export class Hows {
 				case FrameType.CANCEL:
 					const state = this.#reqs.get(frame.requestId)
 					if (state != null) {
-						state.resBodyControl?.error(errAborted)
-						state.resProm?.reject(errAborted)
+						state.resBodyControl?.error(errAborted())
+						state.resProm?.reject(errAborted())
 						this.#reqs.delete(frame.requestId)
 					}
 					break
@@ -127,13 +127,13 @@ export class Hows {
 	}
 	#onClose(): void {
 		this.#ws.close()
-		this.#openProm.reject(errWebSocketClosed)
+		this.#openProm.reject(errWebSocketClosed())
 		this.#openProm = mkProm<void>(true)
 
 		// Cancel pending requests.
 		for (const req of this.#reqs.values()) {
-			req.resProm.reject(errWebSocketClosed)
-			req.resBodyControl.error(errWebSocketClosed)
+			req.resProm.reject(errWebSocketClosed())
+			req.resBodyControl.error(errWebSocketClosed())
 		}
 
 		// Try to reconnect.
@@ -188,8 +188,10 @@ export class Hows {
 		}
 
 		const headers: Header[] = []
-		for (const [k, v] of req.headers) {
-			headers.push([k, v])
+		if (requestInit?.headers != null) {
+			for (const [k, v] of new Headers(requestInit.headers)) {
+				headers.push([k, v])
+			}
 		}
 
 		// Can the body length be measured?
@@ -202,10 +204,10 @@ export class Hows {
 				)
 			}
 
-			if (!req.headers.has('content-type')) {
+			if (!headers.find(([k]) => k.toLowerCase() === 'content-type') && bodyInfo.type != null) {
 				headers.push([
 					'content-type',
-					bodyInfo.type ?? 'application/octet-stream',
+					bodyInfo.type,
 				])
 			}
 			headers.push(['content-length', bodyInfo.len.toString()])
@@ -233,12 +235,14 @@ export class Hows {
 					type: FrameType.REQUEST,
 					requestId: reqId,
 					request: {
-						m: req.method as HttpMethod,
+						m: (requestInit?.method ?? 'GET') as HttpMethod,
 						u: url.pathname + url.search,
 						h: headers,
 					},
 				}),
 			)
+
+			let reqBody: ReadableStream<Uint8Array<ArrayBuffer>> | null | undefined = req.body
 
 			abortSignal?.addEventListener('abort', () => {
 				this.#ws.send(
@@ -248,25 +252,24 @@ export class Hows {
 					}),
 				)
 
-				req.body?.cancel(errAborted)
-				resBodyControl?.error(errAborted)
-				resProm?.reject(errAborted)
+				reqBody?.cancel(errAborted())
+				resBodyControl?.error(errAborted())
+				resProm?.reject(errAborted())
 			})
 
 			// Write body, if any.
-			let body = req.body
-			if (body === undefined) {
+			if (reqBody === undefined) {
 				// Firefox doesn't support this.
 				// We have no choice but to buffer the body.
 				const [buf, controller] = newUnboundedBufferedReadableStream()
-				body = buf
+				reqBody = buf
 				const arrayBuf = await req.arrayBuffer()
 				controller.enqueue(new Uint8Array(arrayBuf))
 				controller.close()
 			}
 
-			if (body != null) {
-				const reader = body.getReader()
+			if (reqBody != null) {
+				const reader = reqBody.getReader()
 				while (true) {
 					const buf = await reader.read()
 					if (buf.value != null) {

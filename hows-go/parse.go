@@ -179,6 +179,7 @@ func DecodeFrame(buf []byte) (f Frame, err error) {
 func EncodeFrame(f Frame) ([]byte, error) {
 	// Preallocate 2KiB.
 	// In my own tests, almost no HoWS-encoded request or response frames will be larger than this.
+	// For response bodies, this may be too small, but we can reallocate if needed.
 	raw := make([]byte, 2048)
 	raw[0] = byte(f.Type)
 	binary.LittleEndian.PutUint64(raw[1:], uint64(f.RequestId))
@@ -196,6 +197,12 @@ func EncodeFrame(f Frame) ([]byte, error) {
 		}
 		jsonSrc = &f.Response
 	case FrameTypeBody:
+		// Allocate a larger buffer if needed.
+		if cap(raw) < minFrameLen+len(f.Body) {
+			newRaw := make([]byte, minFrameLen+len(f.Body))
+			copy(newRaw[:minFrameLen], raw[:minFrameLen])
+			raw = newRaw
+		}
 		copy(raw[minFrameLen:], f.Body)
 		return raw[:minFrameLen+len(f.Body)], nil
 	case FrameTypeEnd:

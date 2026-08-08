@@ -9,13 +9,13 @@ is supported, including by patching `window.fetch`.
 Get it:
 
 ```bash
-npm install hows
+npm install http-over-websocket
 ```
 
 Use it:
 
 ```typescript
-import { Hows } from 'hows'
+import { Hows } from 'http-over-websocket'
 
 const hows = new Hows('ws://example.com/compat/hows')
 

@@ -7,13 +7,13 @@ It currently implements an `http.Handler` wrapper that can be mounted anywhere
 Get it:
 
 ```bash
-npm install hows
+npm install http-over-websocket
 ```
 
 Use it:
 
 ```typescript
-import { Hows } from 'hows'
+import { Hows } from 'http-over-websocket'
 
 const hows = new Hows('ws://example.com/compat/hows')
 

@@ -1,4 +1,4 @@
-import { Hows } from 'hows'
+import { Hows } from 'http-over-websocket'
 
 const consoleElem = document.getElementById('console') as HTMLPreElement
 

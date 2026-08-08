@@ -23,10 +23,33 @@ func main() {
 			flusher.Flush()
 		}
 	}
+	var echoRoute http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			_ = r.Body.Close()
+		}()
+
+		buf := make([]byte, 1024)
+		for {
+			n, err := r.Body.Read(buf)
+			if err != nil {
+				break
+			}
+
+			var wrote int
+			for wrote < n {
+				wN, wErr := w.Write(buf[:n])
+				if wErr != nil {
+					return
+				}
+				wrote += wN
+			}
+		}
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/", helloRoute)
 	mux.Handle("/count", countRoute)
+	mux.Handle("/echo", echoRoute)
 
 	compat := hows.NewHowsWithOptions(mux, &websocket.AcceptOptions{
 		OriginPatterns: []string{"*"},

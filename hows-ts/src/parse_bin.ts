@@ -12,6 +12,7 @@ import {
 	type HttpMethod,
 	httpMethods,
 } from './parse.js'
+import { utf8Decoder, utf8Encoder } from './util.js'
 
 /**
  * A mapping of HTTP method names to their binary IDs.
@@ -29,9 +30,6 @@ const httpMethodToId: Record<HttpMethod, number> = {
 }
 
 const minMsgLen = 1 + 8
-
-const utf8Decoder = new TextDecoder('utf-8')
-const utf8Encoder = new TextEncoder()
 
 /**
  * Decodes binary headers starting at the specified cursor.

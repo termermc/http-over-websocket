@@ -105,6 +105,12 @@ are queued in an unbounded buffer, which could theoretically fill up the browser
 read fast enough. In practice, this meanas that you should only use HoWS with trustworthy servers that won't be
 deliberately abusing clients.
 
+## No `FormData` Support
+The `fetch`-compatible API does not support sending `FormData` bodies. This is because the browser cannot measure the
+length of the `multipart/form-data` body without buffering encoding and buffering the `FormData` completely into memory.
+In practice, this means that sending form files through HoWS is not supported unless they are each sent as a `Blob`
+individually.
+
 # Security Considerations
 HoWS allows browsers to bypass the normal
 [header restrictions](https://developer.mozilla.org/en-US/docs/Glossary/Forbidden_request_header) imposed by `fetch`.

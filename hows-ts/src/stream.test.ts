@@ -2,9 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { newUnboundedBufferedReadableStream } from './stream.js'
-
-const utf8Encoder = new TextEncoder()
-const utf8Decoder = new TextDecoder('utf-8')
+import { utf8Decoder, utf8Encoder } from './util.js'
 
 function bytes(value: string): Uint8Array<ArrayBufferLike> {
 	return utf8Encoder.encode(value)

@@ -19,6 +19,13 @@ window.fetch = hows.fetch.bind(hows)
 
 const utf8Decoder = new TextDecoder('utf-8')
 
+const echoRes = await fetch(hostRoot + '/echo', {
+	method: 'POST',
+	body: 'hello 中國',
+})
+const echo = await echoRes.text()
+println('echo: ' + echo)
+
 async function count(label: string) {
 	println(label + ': starting')
 	const countRes = await fetch(hostRoot + '/count')

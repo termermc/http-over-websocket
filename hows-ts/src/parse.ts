@@ -1,3 +1,5 @@
+import { utf8Decoder, utf8Encoder } from './util.js'
+
 /**
  * Types of HoWS frames.
  */
@@ -128,9 +130,6 @@ export type Frame = {
 )
 
 const minMsgLen = 1 + 8
-
-const utf8Decoder = new TextDecoder('utf-8')
-const utf8Encoder = new TextEncoder()
 
 function validateHeaders(h: any, frameType: string, label: string) {
 	if (!Array.isArray(h)) {

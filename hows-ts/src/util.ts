@@ -57,3 +57,71 @@ export function randomBigInt(): bigint {
 	crypto.getRandomValues(bigIntBuf)
 	return bigIntView.getBigInt64(0)
 }
+
+export const utf8Decoder = new TextDecoder('utf-8')
+export const utf8Encoder = new TextEncoder()
+
+// As long as the byte length of an input string is less than 16KiB, we don't need to allocate anything.
+const textMeasureBuf = new Uint8Array(16 * 1024)
+
+/**
+ * Returns the UTF-8 byte length of a string.
+ * @param str The string to measure.
+ * @returns The UTF-8 byte length of the string.
+ */
+export function utf8ByteLen(str: string): number {
+	const res = utf8Encoder.encodeInto(str, textMeasureBuf)
+	if (res.read < str.length) {
+		// Pre-allocated buffer isn't big enough; regrettably use a new buffer.
+		return utf8Encoder.encode(str).byteLength
+	}
+
+	return res.written
+}
+
+/**
+ * Tries to resolve the length and (optionally) MIME type of a {@link RequestInit} body.
+ * @param body The body to resolve.
+ * @returns The length and (optionally) MIME type of the body, or null if the length cannot be determined.
+ */
+export function tryResolveBody(body: any): { type?: string, len: number } | null {
+	if (body == null) {
+		return null
+	}
+
+	if (typeof body === 'string') {
+		return {
+			len: utf8ByteLen(body)
+		}
+	} else if (body instanceof Blob) {
+		return {
+			len: body.size,
+			type: body.type || undefined,
+		}
+	} else if (typeof body.byteLength === 'number') {
+		// ArrayBufferLike
+		return {
+			len: body.byteLength
+		}
+	} else if (body instanceof URLSearchParams) {
+		return {
+			len: utf8ByteLen(body.toString()),
+			type: 'application/x-www-form-urlencoded'
+		}
+	} else if (body instanceof FormData) {
+		// Types like FormData are not supported due to inefficiencies and possible inconsistency.
+		return null
+	} else if (typeof body === 'object') {
+		// Can it be made into JSON?
+		try {
+			const json = JSON.stringify(body)
+			return {
+				len: utf8ByteLen(json),
+				type: 'application/json'
+			}
+		} catch {}
+	}
+
+	// Cannot determine length
+	return null
+}

@@ -252,6 +252,9 @@ func (h *Hows) handleReq(
 		delete(h.states, frame.RequestId)
 		h.statesMu.Unlock()
 
+		// If we haven't sent headers yet, do that now.
+		state.WriteHeader(http.StatusNoContent)
+
 		endFrame, _ := EncodeFrame(Frame{
 			Type:      FrameTypeEnd,
 			RequestId: state.id,

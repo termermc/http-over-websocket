@@ -215,8 +215,8 @@ func (h *Hows) handleReq(
 		panic("BUG: created invalid request: " + err.Error())
 	}
 	req.Proto = "HTTP/2"
-	req.ProtoMajor = 2
-	req.ProtoMinor = 0
+	req.ProtoMajor = 1
+	req.ProtoMinor = 1
 	req.Header = reqHeaders
 	req.ContentLength = contentLen
 	req.Trailer = trailers

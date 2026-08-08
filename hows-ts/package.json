@@ -1,11 +1,14 @@
 {
 	"name": "hows",
-	"version": "1.0.0",
+	"version": "0.0.1",
 	"description": "A protocol that has HTTP/2-ish semantics to multiplex HTTP over a single WebSocket connection",
 	"license": "MIT",
 	"author": "termer",
 	"type": "module",
-	"main": "index.ts",
+	"main": "dist/index.js",
+	"files": [
+		"dist"
+	],
 	"repository": "https://github.com/termermc/http-over-websocket",
 	"keywords": [
 		"http",
@@ -13,12 +16,15 @@
 		"protocol",
 		"tunnel",
 		"compatibility",
-		"http2"
+		"http2",
+		"grpc"
 	],
 	"scripts": {
-		"test": "node --test",
+		"test": "node --run build && node --test dist/src/*.test.js",
 		"check": "tsc --noEmit",
-		"fmt": "prettier --write ."
+		"build": "tsc",
+		"fmt": "prettier --write .",
+		"ci": "node --run fmt && node --run build && node --run test"
 	},
 	"devDependencies": {
 		"@types/node": "^26.1.2",

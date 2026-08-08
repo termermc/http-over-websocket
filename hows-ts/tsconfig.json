@@ -15,16 +15,18 @@
 		"strictNullChecks": true,
 		"strictPropertyInitialization": true,
 		"alwaysStrict": true,
-		"removeComments": true,
 		"preserveConstEnums": true,
+		"allowSyntheticDefaultImports": true,
 		"sourceMap": true,
-		"noEmit": true,
+		"noEmit": false,
 		"allowJs": true,
 		"checkJs": true,
-		"allowImportingTsExtensions": true,
-		"types": ["node"]
+		"declaration": true,
+		"declarationMap": true,
+		"types": ["node"],
+		"outDir": "dist"
 	},
 	"files": ["index"],
-	"exclude": ["node_modules"],
-	"include": ["**/*"]
+	"exclude": ["node_modules", "dist", "prettier.config.mjs"],
+	"include": ["index.ts", "src/**/*"]
 }

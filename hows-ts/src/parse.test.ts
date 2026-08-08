@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decodeFrame, encodeFrame, type Frame, FrameType } from './parse.ts'
-import { randomBigInt } from './util.ts'
+import { decodeFrame, encodeFrame, type Frame, FrameType } from './parse.js'
+import { randomBigInt } from './util.js'
 
 test('encode then decode result matches original frame', () => {
 	const frame: Frame = {
@@ -25,7 +25,7 @@ test('encode then decode result matches original frame', () => {
 test('JSON codec benchmark', () => {
 	const start = performance.now()
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		const encoded = encodeFrame({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
@@ -36,15 +36,15 @@ test('JSON codec benchmark', () => {
 					['Content-Type', 'application/json'],
 					['Content-Length', '255'],
 					['User-Agent', 'Firefox'],
-				]
-			}
+				],
+			},
 		})
 		decodeFrame(encoded)
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })
 
 test('JSON decode benchmark', () => {
@@ -60,23 +60,23 @@ test('JSON decode benchmark', () => {
 				['Content-Type', 'application/json'],
 				['Content-Length', '255'],
 				['User-Agent', 'Firefox'],
-			]
-		}
+			],
+		},
 	})
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		decodeFrame(encoded)
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })
 
 test('JSON encode benchmark', () => {
 	const start = performance.now()
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		encodeFrame({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
@@ -87,12 +87,12 @@ test('JSON encode benchmark', () => {
 					['Content-Type', 'application/json'],
 					['Content-Length', '255'],
 					['User-Agent', 'Firefox'],
-				]
-			}
+				],
+			},
 		})
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })

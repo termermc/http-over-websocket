@@ -1,6 +1,15 @@
-import { BufferedReadableStreamController, newUnboundedBufferedReadableStream } from './stream.ts'
-import { mkProm, randomBigInt, writeWs } from './util.ts'
-import { decodeFrame, encodeFrame, FrameType, Header, HttpMethod } from './parse.ts'
+import {
+	BufferedReadableStreamController,
+	newUnboundedBufferedReadableStream,
+} from './stream.js'
+import { mkProm, randomBigInt, writeWs } from './util.js'
+import {
+	decodeFrame,
+	encodeFrame,
+	FrameType,
+	Header,
+	HttpMethod,
+} from './parse.js'
 
 type ReqState = {
 	resBody: ReadableStream<Uint8Array<ArrayBuffer>>
@@ -39,7 +48,9 @@ export class Hows {
 			const frame = decodeFrame(new Uint8Array(buf))
 			const req = this.#reqs.get(frame.requestId)
 			if (req == null) {
-				console.warn(`got frame type ${frame.type} for unknown request ID ${frame.requestId}`)
+				console.warn(
+					`got frame type ${frame.type} for unknown request ID ${frame.requestId}`,
+				)
 				return
 			}
 
@@ -69,7 +80,9 @@ export class Hows {
 					}
 					break
 				default:
-					console.warn(`received irrelevant frame type ${frame.type} for request ID ${frame.requestId}`)
+					console.warn(
+						`received irrelevant frame type ${frame.type} for request ID ${frame.requestId}`,
+					)
 			}
 		} catch (err) {
 			console.error('failed to decode HoWS frame:', err)
@@ -93,7 +106,9 @@ export class Hows {
 				return
 			}
 
-			console.warn(`expected array buffer from WebSocket, but got ${typeof data}`)
+			console.warn(
+				`expected array buffer from WebSocket, but got ${typeof data}`,
+			)
 		})
 		ws.addEventListener('open', this.#onOpen.bind(this))
 		ws.addEventListener('close', this.#onClose.bind(this))
@@ -134,7 +149,10 @@ export class Hows {
 	 * @param input
 	 * @param requestInit
 	 */
-	async fetch(input: string | URL | Request, requestInit?: RequestInit): Promise<Response> {
+	async fetch(
+		input: string | URL | Request,
+		requestInit?: RequestInit,
+	): Promise<Response> {
 		// Wait for WebSocket open.
 		await this.#openProm.promise
 
@@ -160,7 +178,9 @@ export class Hows {
 		}
 
 		if (url.host !== this.#wsUrlParsed.host) {
-			throw new TypeError(`cannot use HoWS fetch with a URL whose host differs from the WebSocket host`)
+			throw new TypeError(
+				`cannot use HoWS fetch with a URL whose host differs from the WebSocket host`,
+			)
 		}
 
 		const headers: Header[] = []
@@ -173,21 +193,26 @@ export class Hows {
 		const reqId = randomBigInt()
 
 		// Write request.
-		await writeWs(this.#ws, encodeFrame({
-			type: FrameType.REQUEST,
-			requestId: reqId,
-			request: {
-				m: req.method as HttpMethod,
-				u: url.pathname + url.search,
-				h: headers,
-			}
-		}))
+		await writeWs(
+			this.#ws,
+			encodeFrame({
+				type: FrameType.REQUEST,
+				requestId: reqId,
+				request: {
+					m: req.method as HttpMethod,
+					u: url.pathname + url.search,
+					h: headers,
+				},
+			}),
+		)
 
 		abortSignal?.addEventListener('abort', () => {
-			this.#ws.send(encodeFrame({
-				type: FrameType.CANCEL,
-				requestId: reqId,
-			}))
+			this.#ws.send(
+				encodeFrame({
+					type: FrameType.CANCEL,
+					requestId: reqId,
+				}),
+			)
 
 			req.body?.cancel(errAborted)
 			resBodyControl?.error(errAborted)
@@ -201,11 +226,14 @@ export class Hows {
 			while (true) {
 				const buf = await reader.read()
 				if (buf.value != null) {
-					await writeWs(this.#ws, encodeFrame({
-						type: FrameType.BODY,
-						requestId: reqId,
-						body: buf.value,
-					}))
+					await writeWs(
+						this.#ws,
+						encodeFrame({
+							type: FrameType.BODY,
+							requestId: reqId,
+							body: buf.value,
+						}),
+					)
 				}
 				if (buf.done) {
 					break
@@ -214,13 +242,16 @@ export class Hows {
 		}
 
 		// Finish request.
-		await writeWs(this.#ws, encodeFrame({
-			type: FrameType.END,
-			requestId: reqId,
-			end: {
-				t: [],
-			},
-		}))
+		await writeWs(
+			this.#ws,
+			encodeFrame({
+				type: FrameType.END,
+				requestId: reqId,
+				end: {
+					t: [],
+				},
+			}),
+		)
 
 		// Create pending request entry.
 		const [resBody, resBodyControl] = newUnboundedBufferedReadableStream()

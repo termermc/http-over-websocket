@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { newUnboundedBufferedReadableStream } from './stream.ts'
+import { newUnboundedBufferedReadableStream } from './stream.js'
 
-function bytes(value: string): Uint8Array<ArrayBuffer> {
-	return new TextEncoder().encode(value)
+const utf8Encoder = new TextEncoder()
+const utf8Decoder = new TextDecoder('utf-8')
+
+function bytes(value: string): Uint8Array<ArrayBufferLike> {
+	return utf8Encoder.encode(value)
 }
 
 function text(value: any): string {
-	return new TextDecoder().decode(value)
+	return utf8Decoder.decode(value)
 }
 
 test('reads enqueued chunks in order', async () => {

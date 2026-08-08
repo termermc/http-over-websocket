@@ -5,21 +5,27 @@
  * @deprecated This module is included for historical purposes only.
  */
 
-import { type Frame, FrameType, type Header, type HttpMethod, httpMethods } from './parse.ts'
+import {
+	type Frame,
+	FrameType,
+	type Header,
+	type HttpMethod,
+	httpMethods,
+} from './parse.js'
 
 /**
  * A mapping of HTTP method names to their binary IDs.
  */
 const httpMethodToId: Record<HttpMethod, number> = {
-	'GET': 0,
-	'HEAD': 1,
-	'POST': 2,
-	'PUT': 3,
-	'DELETE': 4,
-	'CONNECT': 5,
-	'OPTIONS': 6,
-	'TRACE': 7,
-	'PATCH': 8,
+	GET: 0,
+	HEAD: 1,
+	POST: 2,
+	PUT: 3,
+	DELETE: 4,
+	CONNECT: 5,
+	OPTIONS: 6,
+	TRACE: 7,
+	PATCH: 8,
 }
 
 const minMsgLen = 1 + 8
@@ -36,7 +42,11 @@ const utf8Encoder = new TextEncoder()
  * @returns The decoded headers
  * @deprecated This module is included for historical purposes only.
  */
-function decodeBinaryHeaders(buf: Uint8Array, view: DataView, cursor: number): Header[] {
+function decodeBinaryHeaders(
+	buf: Uint8Array,
+	view: DataView,
+	cursor: number,
+): Header[] {
 	const headerCount = view.getUint8(cursor)
 	cursor++
 
@@ -104,7 +114,9 @@ export function decodeFrameBin(buf: Uint8Array<ArrayBufferLike>): Frame {
 			const uriLen = view.getUint16(cursor, true)
 			cursor += 2
 
-			const uri = utf8Decoder.decode(buf.subarray(cursor, cursor + uriLen))
+			const uri = utf8Decoder.decode(
+				buf.subarray(cursor, cursor + uriLen),
+			)
 			cursor += uriLen
 
 			const headers = decodeBinaryHeaders(buf, view, cursor)
@@ -126,7 +138,9 @@ export function decodeFrameBin(buf: Uint8Array<ArrayBufferLike>): Frame {
 			const msgLen = view.getUint8(cursor)
 			cursor++
 
-			const msg = utf8Decoder.decode(buf.subarray(cursor, cursor + msgLen))
+			const msg = utf8Decoder.decode(
+				buf.subarray(cursor, cursor + msgLen),
+			)
 			cursor += msgLen
 
 			const headers = decodeBinaryHeaders(buf, view, cursor)
@@ -181,7 +195,12 @@ function calcBinaryHeadersSize(headers: Header[]): number {
  * @param cursor The current cursor into the buffer
  * @param headers The headers to encode
  */
-function encodeBinaryHeaders(buf: Uint8Array, view: DataView, cursor: number, headers: Header[]) {
+function encodeBinaryHeaders(
+	buf: Uint8Array,
+	view: DataView,
+	cursor: number,
+	headers: Header[],
+) {
 	view.setUint8(cursor, headers.length)
 	cursor++
 
@@ -290,7 +309,10 @@ export function encodeFrameBin(frame: Frame): Uint8Array<ArrayBuffer> {
 			view.setUint16(cursor, req.u.length, true)
 			cursor += 2
 
-			utf8Encoder.encodeInto(req.u, buf.subarray(cursor, cursor + req.u.length))
+			utf8Encoder.encodeInto(
+				req.u,
+				buf.subarray(cursor, cursor + req.u.length),
+			)
 			cursor += req.u.length
 
 			encodeBinaryHeaders(buf, view, cursor, req.h)
@@ -305,7 +327,10 @@ export function encodeFrameBin(frame: Frame): Uint8Array<ArrayBuffer> {
 			view.setUint8(cursor, res.m.length)
 			cursor++
 
-			utf8Encoder.encodeInto(res.m, buf.subarray(cursor, cursor + res.m.length))
+			utf8Encoder.encodeInto(
+				res.m,
+				buf.subarray(cursor, cursor + res.m.length),
+			)
 			cursor += res.m.length
 
 			encodeBinaryHeaders(buf, view, cursor, res.h)

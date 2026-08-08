@@ -42,7 +42,9 @@ export type BufferedReadableStreamController = {
 export function newUnboundedBufferedReadableStream(
 	options: BufferedReadableStreamOptions = {},
 ): [ReadableStream<Uint8Array<ArrayBuffer>>, BufferedReadableStreamController] {
-	let controller!: ReadableStreamDefaultController<Uint8Array<ArrayBufferLike>>
+	let controller!: ReadableStreamDefaultController<
+		Uint8Array<ArrayBufferLike>
+	>
 
 	let state: 'readable' | 'closed' | 'errored' | 'canceled' = 'readable'
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { type Frame, FrameType } from './parse.ts'
-import { randomBigInt } from './util.ts'
-import { decodeFrameBin, encodeFrameBin } from './parse_bin.ts'
+import { type Frame, FrameType } from './parse.js'
+import { randomBigInt } from './util.js'
+import { decodeFrameBin, encodeFrameBin } from './parse_bin.js'
 
 test('binary encode then decode result matches original frame', () => {
 	const frame: Frame = {
@@ -26,7 +26,7 @@ test('binary encode then decode result matches original frame', () => {
 test('binary codec benchmark', () => {
 	const start = performance.now()
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		const encoded = encodeFrameBin({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
@@ -37,15 +37,15 @@ test('binary codec benchmark', () => {
 					['Content-Type', 'application/json'],
 					['Content-Length', '255'],
 					['User-Agent', 'Firefox'],
-				]
-			}
+				],
+			},
 		})
 		decodeFrameBin(encoded)
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })
 
 test('binary decode benchmark', () => {
@@ -61,23 +61,23 @@ test('binary decode benchmark', () => {
 				['Content-Type', 'application/json'],
 				['Content-Length', '255'],
 				['User-Agent', 'Firefox'],
-			]
-		}
+			],
+		},
 	})
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		decodeFrameBin(encoded)
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })
 
 test('binary encode benchmark', () => {
 	const start = performance.now()
 
-	for (let i = 0; i < 1_000_000; i++) {
+	for (let i = 0; i < 10_000; i++) {
 		encodeFrameBin({
 			type: FrameType.REQUEST,
 			requestId: randomBigInt(),
@@ -88,12 +88,12 @@ test('binary encode benchmark', () => {
 					['Content-Type', 'application/json'],
 					['Content-Length', '255'],
 					['User-Agent', 'Firefox'],
-				]
-			}
+				],
+			},
 		})
 	}
 
 	const end = performance.now()
 
-	console.log(`took ${(end-start)/1_000}s`)
+	console.log(`took ${(end - start) / 1_000}s`)
 })

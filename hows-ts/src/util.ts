@@ -18,7 +18,9 @@ export function mkProm<T>(): PromiseWithResolvers<T> {
 
 const maxBufferedAmount = 1024 * 1024 // 1MiB
 
-const errWebSocketNotOpen = new TypeError('cannot write to WebSocket that is not open')
+const errWebSocketNotOpen = new TypeError(
+	'cannot write to WebSocket that is not open',
+)
 
 /**
  * Writes a frame to a {@link WebSocket}. Does its best to wait for drainage if buffer pressure is too high.

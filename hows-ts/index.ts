@@ -1,2 +1,2 @@
-export * from './src/parse.ts'
-export * from './src/hows.ts'
+export * from './src/parse.js'
+export * from './src/hows.js'

@@ -50,7 +50,7 @@ export const httpMethods = [
 /**
  * A valid HTTP method.
  */
-export type HttpMethod = typeof httpMethods[number]
+export type HttpMethod = (typeof httpMethods)[number]
 
 /**
  * Types of HoWS frames.
@@ -124,7 +124,7 @@ export type Frame = {
 	  }
 	| {
 			type: 'c'
-	}
+	  }
 )
 
 const minMsgLen = 1 + 8

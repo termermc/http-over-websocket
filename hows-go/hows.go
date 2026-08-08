@@ -214,7 +214,7 @@ func (h *Hows) handleReq(
 	if err != nil {
 		panic("BUG: created invalid request: " + err.Error())
 	}
-	req.Proto = "HTTP/2"
+	req.Proto = "HTTP/1.1"
 	req.ProtoMajor = 1
 	req.ProtoMinor = 1
 	req.Header = reqHeaders

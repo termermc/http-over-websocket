@@ -1,6 +1,6 @@
 {
 	"name": "http-over-websocket",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "A protocol that has HTTP/2-ish semantics to multiplex HTTP over a single WebSocket connection",
 	"license": "MIT",
 	"author": "termer",

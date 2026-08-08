@@ -7,21 +7,33 @@ It currently implements an `http.Handler` wrapper that can be mounted anywhere
 Get it:
 
 ```bash
-npm install http-over-websocket
+go get github.com/termermc/http-over-websocket/hows-go
 ```
 
 Use it:
 
-```typescript
-import { Hows } from 'http-over-websocket'
+```go
+package main
 
-const hows = new Hows('ws://example.com/compat/hows')
+import (
+	"net/http"
 
-const response = await hows.fetch('/api/info.json')
-if (response.ok) {
-	const json = await response.json()
-} else {
-	alert(`Got status: ${response.status} ${response.statusText}`)
+	"github.com/termermc/http-over-websocket/hows-go"
+)
+
+func main() {
+	var helloRoute http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("hello world"))
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", helloRoute)
+
+	compat := hows.NewHows(mux)
+	mux.Handle("/compat/hows", compat)
+
+	if err := http.ListenAndServe("0.0.0.0:5172", mux); err != nil {
+		panic(err)
+	}
 }
-
 ```

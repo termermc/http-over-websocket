@@ -30,6 +30,11 @@ func frameHeadersToHttpHeader(headers [][]string) http.Header {
 		}
 
 		vals, _ := res[key]
+		if vals == nil {
+			vals = make([]string, 0, 1)
+			res[key] = vals
+		}
+
 		vals = append(vals, val)
 	}
 	return res

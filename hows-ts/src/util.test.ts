@@ -9,7 +9,7 @@ test('randomBigInt works', async () => {
 })
 
 test(`utf8ByteLen doesn't allocate unless it's necessary`, () => {
-	const len = utf8ByteLen("hello 中國")
+	const len = utf8ByteLen('hello 中國')
 
 	assert.strictEqual(len, 12)
 })
@@ -56,7 +56,7 @@ test('tryResolveBody works', () => {
 	const formDataRes = tryResolveBody(formDataBody)
 	assert.strictEqual(formDataRes, null)
 
-	const jsonBody = {message: 'hello 中國'}
+	const jsonBody = { message: 'hello 中國' }
 	const jsonRes = tryResolveBody(jsonBody)
 	assert.strictEqual(jsonRes?.len, 26)
 	assert.strictEqual(jsonRes?.type, 'application/json')

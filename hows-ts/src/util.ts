@@ -88,14 +88,16 @@ export function utf8ByteLen(str: string): number {
  * @param body The body to resolve.
  * @returns The length and (optionally) MIME type of the body, or null if the length cannot be determined.
  */
-export function tryResolveBody(body: any): { type?: string, len: number } | null {
+export function tryResolveBody(
+	body: any,
+): { type?: string; len: number } | null {
 	if (body == null) {
 		return null
 	}
 
 	if (typeof body === 'string') {
 		return {
-			len: utf8ByteLen(body)
+			len: utf8ByteLen(body),
 		}
 	} else if (body instanceof Blob) {
 		return {
@@ -105,12 +107,12 @@ export function tryResolveBody(body: any): { type?: string, len: number } | null
 	} else if (typeof body.byteLength === 'number') {
 		// ArrayBufferLike
 		return {
-			len: body.byteLength
+			len: body.byteLength,
 		}
 	} else if (body instanceof URLSearchParams) {
 		return {
 			len: utf8ByteLen(body.toString()),
-			type: 'application/x-www-form-urlencoded'
+			type: 'application/x-www-form-urlencoded',
 		}
 	} else if (body instanceof FormData) {
 		// Types like FormData are not supported due to inefficiencies and possible inconsistency.
@@ -121,7 +123,7 @@ export function tryResolveBody(body: any): { type?: string, len: number } | null
 			const json = JSON.stringify(body)
 			return {
 				len: utf8ByteLen(json),
-				type: 'application/json'
+				type: 'application/json',
 			}
 		} catch {}
 	}

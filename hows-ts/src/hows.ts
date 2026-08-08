@@ -2,7 +2,7 @@ import {
 	BufferedReadableStreamController,
 	newUnboundedBufferedReadableStream,
 } from './stream.js'
-import { mkProm, randomBigInt, tryResolveBody, utf8ByteLen, writeWs } from './util.js'
+import { mkProm, randomBigInt, tryResolveBody, writeWs } from './util.js'
 import {
 	decodeFrame,
 	encodeFrame,
@@ -57,11 +57,14 @@ export class Hows {
 			switch (frame.type) {
 				case FrameType.RESPONSE:
 					const fr = frame.response
-					const res = new Response(fr.s === 204 ? null : req.resBody, {
-						status: fr.s,
-						statusText: fr.m,
-						headers: fr.h,
-					})
+					const res = new Response(
+						fr.s === 204 ? null : req.resBody,
+						{
+							status: fr.s,
+							statusText: fr.m,
+							headers: fr.h,
+						},
+					)
 					req.resProm.resolve(res)
 					break
 				case FrameType.BODY:
@@ -194,11 +197,16 @@ export class Hows {
 		if (initBody != null) {
 			const bodyInfo = tryResolveBody(requestInit?.body)
 			if (bodyInfo == null) {
-				throw new TypeError(`cannot use ${initBody?.constructor?.name ?? typeof initBody} bodies in HoWS fetch`)
+				throw new TypeError(
+					`cannot use ${initBody?.constructor?.name ?? typeof initBody} bodies in HoWS fetch`,
+				)
 			}
 
 			if (!req.headers.has('content-type')) {
-				headers.push(['content-type', bodyInfo.type ?? 'application/octet-stream'])
+				headers.push([
+					'content-type',
+					bodyInfo.type ?? 'application/octet-stream',
+				])
 			}
 			headers.push(['content-length', bodyInfo.len.toString()])
 		}
@@ -209,7 +217,8 @@ export class Hows {
 
 		try {
 			// Create pending request entry.
-			const [resBody, resBodyControl] = newUnboundedBufferedReadableStream()
+			const [resBody, resBodyControl] =
+				newUnboundedBufferedReadableStream()
 			const resProm = mkProm<Response>()
 			this.#reqs.set(reqId, {
 				resBody,

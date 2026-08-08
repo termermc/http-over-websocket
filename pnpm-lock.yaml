@@ -8,7 +8,7 @@ importers:
 
   demo:
     dependencies:
-      hows:
+      http-over-websocket:
         specifier: workspace:*
         version: link:../hows-ts
     devDependencies:

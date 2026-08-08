@@ -19,33 +19,38 @@ window.fetch = hows.fetch.bind(hows)
 
 const utf8Decoder = new TextDecoder('utf-8')
 
-const echoRes = await fetch(hostRoot + '/echo', {
-	method: 'POST',
-	body: 'hello 中國',
-})
-const echo = await echoRes.text()
-println('echo: ' + echo)
+try {
+	const echoRes = await fetch(hostRoot + '/echo', {
+		method: 'POST',
+		body: 'hello 中國',
+	})
+	const echo = await echoRes.text()
+	println('echo: ' + echo)
 
-async function count(label: string) {
-	println(label + ': starting')
-	const countRes = await fetch(hostRoot + '/count')
-	const reader = countRes.body!.getReader()
-	while (true) {
-		const { done, value } = await reader.read()
-		if (value) {
-			println(label + ': ' + utf8Decoder.decode(value))
+	async function count(label: string) {
+		println(label + ': starting')
+		const countRes = await fetch(hostRoot + '/count')
+		const reader = countRes.body!.getReader()
+		while (true) {
+			const { done, value } = await reader.read()
+			if (value) {
+				println(label + ': ' + utf8Decoder.decode(value))
+			}
+			if (done) {
+				break
+			}
 		}
-		if (done) {
-			break
-		}
+		println(label + ': done')
 	}
-	println(label + ': done')
-}
 
-const proms = new Array<Promise<void>>(26)
-for (let i = 0; i < 26; i++) {
-	proms[i] = count(String.fromCharCode(97 + i))
-}
+	const proms = new Array<Promise<void>>(26)
+	for (let i = 0; i < 26; i++) {
+		proms[i] = count(String.fromCharCode(97 + i))
+	}
 
-await Promise.all(proms)
-println("=== all done ===")
+	await Promise.all(proms)
+	println("=== all done ===")
+} catch (err) {
+	console.error(err)
+	println(String(err))
+}

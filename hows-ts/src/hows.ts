@@ -27,7 +27,7 @@ export class Hows {
 	readonly #wsUrl: string
 	readonly #wsUrlParsed: URL
 	#ws: WebSocket
-	#openProm = mkProm<void>()
+	#openProm = mkProm<void>(true)
 	#openDelay = 0
 
 	#reqs = new Map<bigint, ReqState>()
@@ -98,7 +98,8 @@ export class Hows {
 		const ws = new WebSocket(this.#wsUrl, ['hows'])
 		ws.binaryType = 'arraybuffer'
 		this.#openProm.reject('opening new WebSocket connection')
-		this.#openProm = mkProm<void>()
+		this.#openProm = mkProm<void>(true)
+
 		ws.addEventListener('message', (event: MessageEvent) => {
 			const data = event.data
 			if (data instanceof ArrayBuffer) {
@@ -124,7 +125,7 @@ export class Hows {
 	#onClose(): void {
 		this.#ws.close()
 		this.#openProm.reject(errWebSocketClosed)
-		this.#openProm = mkProm<void>()
+		this.#openProm = mkProm<void>(true)
 
 		// Cancel pending requests.
 		for (const req of this.#reqs.values()) {

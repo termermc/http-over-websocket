@@ -1,13 +1,17 @@
 /**
  * Polyfill for {@link Promise.withResolvers}.
  */
-export function mkProm<T>(): PromiseWithResolvers<T> {
+export function mkProm<T>(globalCatch?: boolean): PromiseWithResolvers<T> {
 	let res: (value: T | PromiseLike<T>) => void
 	let rej: (err: any) => void
 	const prom = new Promise<T>((resolve, reject) => {
 		res = resolve
 		rej = reject
 	})
+
+	if (globalCatch) {
+		prom.catch(() => {})
+	}
 
 	return {
 		promise: prom,

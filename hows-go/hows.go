@@ -108,7 +108,7 @@ func (r *reqState) WriteHeader(statusCode int) {
 	r.resMu.Lock()
 	resSent := r.resSent
 	r.resMu.Unlock()
-	if !resSent {
+	if resSent {
 		return
 	}
 

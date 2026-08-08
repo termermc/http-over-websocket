@@ -1,4 +1,3 @@
-import './style.css'
 import { Hows } from 'hows'
 
 const consoleElem = document.getElementById('console') as HTMLPreElement

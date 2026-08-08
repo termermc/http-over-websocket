@@ -9,6 +9,7 @@ type ReqState = {
 }
 
 const errWebSocketClosed = new Error('HoWS WebSocket closed')
+const errAborted = new DOMException('The operation was aborted', 'AbortError')
 
 /**
  * An implementation of W3C fetch multiplexed using a WebSocket connection.
@@ -58,6 +59,14 @@ export class Hows {
 				case FrameType.END:
 					this.#reqs.delete(frame.requestId)
 					req.resBodyControl.close()
+					break
+				case FrameType.CANCEL:
+					const state = this.#reqs.get(frame.requestId)
+					if (state != null) {
+						state.resBodyControl?.error(errAborted)
+						state.resProm?.reject(errAborted)
+						this.#reqs.delete(frame.requestId)
+					}
 					break
 				default:
 					console.warn(`received irrelevant frame type ${frame.type} for request ID ${frame.requestId}`)
@@ -154,12 +163,12 @@ export class Hows {
 			throw new TypeError(`cannot use HoWS fetch with a URL whose host differs from the WebSocket host`)
 		}
 
-		// TODO Support abort, both when the abort signal is triggered and when a response body is prematurely closed.
-
 		const headers: Header[] = []
 		for (const [k, v] of req.headers) {
 			headers.push([k, v])
 		}
+
+		const abortSignal = requestInit?.signal
 
 		const reqId = randomBigInt()
 
@@ -173,6 +182,17 @@ export class Hows {
 				h: headers,
 			}
 		}))
+
+		abortSignal?.addEventListener('abort', () => {
+			this.#ws.send(encodeFrame({
+				type: FrameType.CANCEL,
+				requestId: reqId,
+			}))
+
+			req.body?.cancel(errAborted)
+			resBodyControl?.error(errAborted)
+			resProm?.reject(errAborted)
+		})
 
 		// Write body, if any.
 		const body = req.body

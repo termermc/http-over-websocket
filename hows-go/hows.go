@@ -248,11 +248,6 @@ func (h *Hows) handleReq(
 		_ = state.reqBodyReader.Close()
 		_ = state.reqBodyWriter.Close()
 
-		// TODO If we haven't received the END frame from the client already, sent a cancel frame.
-		// TODO Do we need a flag on the cancel frame on whether we just want to stop receiving the body or whether the
-		// entire thing was canceled? It seems like a client sending cancel means the entire thing is canceled, whereas
-		// a server sending cancel could mean either "stop sending body" or just "I won't send you anything". Find out.
-
 		h.statesMu.Lock()
 		delete(h.states, frame.RequestId)
 		h.statesMu.Unlock()
@@ -310,6 +305,21 @@ func (h *Hows) handleEnd(frame Frame) {
 	_ = state.reqBodyWriter.Close()
 }
 
+func (h *Hows) handleCancel(frame Frame) {
+	h.statesMu.Lock()
+	state, has := h.states[frame.RequestId]
+	if has {
+		delete(h.states, frame.RequestId)
+	} else {
+		h.statesMu.Unlock()
+		return
+	}
+	h.statesMu.Unlock()
+
+	_ = state.reqBodyWriter.Close()
+	state.ctxCancel(context.Canceled)
+}
+
 func (h *Hows) ServeHTTP(wsWriter http.ResponseWriter, wsReq *http.Request) {
 	acceptOpts := h.acceptOpts
 	if acceptOpts == nil {
@@ -352,6 +362,8 @@ func (h *Hows) ServeHTTP(wsWriter http.ResponseWriter, wsReq *http.Request) {
 			h.handleBody(frame)
 		case FrameTypeEnd:
 			h.handleEnd(frame)
+		case FrameTypeCancel:
+			h.handleCancel(frame)
 		default:
 			// Unknown frame type.
 			return

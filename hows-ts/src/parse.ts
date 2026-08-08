@@ -23,6 +23,13 @@ export const FrameType = {
 	 * It can optionally include trailers.
 	 */
 	END: 'e',
+
+	/**
+	 * The frame type for canceling a body.
+	 * If sent by the client, it cancels reading the response body and sending the request body.
+	 * If sent by the server, it cancels reading the request body and sending the response body.
+	 */
+	CANCEL: 'c',
 } as const
 
 /**
@@ -115,6 +122,9 @@ export type Frame = {
 				t: Header[]
 			}
 	  }
+	| {
+			type: 'c'
+	}
 )
 
 const minMsgLen = 1 + 8
@@ -216,6 +226,11 @@ export function decodeFrame(buf: Uint8Array<ArrayBufferLike>): Frame {
 				requestId: reqId,
 				end: json,
 			}
+		case FrameType.CANCEL:
+			return {
+				type: type,
+				requestId: reqId,
+			}
 		default:
 			throw new TypeError(
 				`frame type "${type}" was not recognized; is the buffer not a HoWS frame?`,
@@ -229,16 +244,6 @@ export function decodeFrame(buf: Uint8Array<ArrayBufferLike>): Frame {
  * @returns The encoded frame buffer.
  */
 export function encodeFrame(frame: Frame): Uint8Array<ArrayBuffer> {
-	if (frame.type === FrameType.BODY) {
-		const buf = new Uint8Array(minMsgLen + frame.body.length)
-		buf[0] = FrameType.BODY.codePointAt(0)!
-		new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
-		for (let i = 0; i < frame.body.length; i++) {
-			buf[i + minMsgLen] = frame.body[i]!
-		}
-		return buf
-	}
-
 	let json: string
 	switch (frame.type) {
 		case FrameType.REQUEST:
@@ -247,9 +252,23 @@ export function encodeFrame(frame: Frame): Uint8Array<ArrayBuffer> {
 		case FrameType.RESPONSE:
 			json = JSON.stringify(frame.response)
 			break
+		case FrameType.BODY: {
+			const buf = new Uint8Array(minMsgLen + frame.body.length)
+			buf[0] = FrameType.BODY.codePointAt(0)!
+			new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
+			for (let i = 0; i < frame.body.length; i++) {
+				buf[i + minMsgLen] = frame.body[i]!
+			}
+			return buf
+		}
 		case FrameType.END:
 			json = JSON.stringify(frame.end)
 			break
+		case FrameType.CANCEL:
+			const buf = new Uint8Array(minMsgLen)
+			buf[0] = FrameType.CANCEL.codePointAt(0)!
+			new DataView(buf.buffer).setBigInt64(1, frame.requestId, true)
+			return buf
 	}
 
 	const buf = new Uint8Array(minMsgLen + json.length)

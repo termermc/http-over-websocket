@@ -27,6 +27,11 @@ const (
 	// FrameTypeEnd is the frame type that is sent at the end of a request or response.
 	// It can optionally include trailers.
 	FrameTypeEnd FrameType = 'e'
+
+	// FrameTypeCancel is the frame type for canceling a body.
+	// If sent by the client, it cancels reading the response body and sending the request body.
+	// If sent by the server, it cancels reading the request body and sending the response body.
+	FrameTypeCancel FrameType = 'c'
 )
 
 // Frame is a HoWS frame.
@@ -68,6 +73,9 @@ type FrameResponse struct {
 
 type FrameEnd struct {
 	Trailers [][]string `json:"t"`
+}
+
+type FrameCancel struct {
 }
 
 func checkHeaders(headers [][]string) bool {
@@ -157,6 +165,9 @@ func DecodeFrame(buf []byte) (f Frame, err error) {
 		}
 
 		return f, nil
+	case FrameTypeCancel:
+		// No body for this one.
+		return f, nil
 	default:
 		return f, ErrInvalidFrame
 	}
@@ -192,6 +203,8 @@ func EncodeFrame(f Frame) ([]byte, error) {
 			f.End.Trailers = [][]string{}
 		}
 		jsonSrc = &f.End
+	case FrameTypeCancel:
+		return raw[:minFrameLen], nil
 	default:
 		return nil, ErrInvalidFrame
 	}

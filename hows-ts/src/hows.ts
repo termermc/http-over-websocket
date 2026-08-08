@@ -49,7 +49,7 @@ export class Hows {
 			const req = this.#reqs.get(frame.requestId)
 			if (req == null) {
 				console.warn(
-					`got frame type ${frame.type} for unknown request ID ${frame.requestId}`,
+					`got frame type "${frame.type}" for unknown request ID ${frame.requestId}`,
 				)
 				return
 			}
@@ -207,76 +207,92 @@ export class Hows {
 
 		const reqId = randomBigInt()
 
-		// Write request.
-		await writeWs(
-			this.#ws,
-			encodeFrame({
-				type: FrameType.REQUEST,
-				requestId: reqId,
-				request: {
-					m: req.method as HttpMethod,
-					u: url.pathname + url.search,
-					h: headers,
-				},
-			}),
-		)
+		try {
+			// Create pending request entry.
+			const [resBody, resBodyControl] = newUnboundedBufferedReadableStream()
+			const resProm = mkProm<Response>()
+			this.#reqs.set(reqId, {
+				resBody,
+				resBodyControl,
+				resProm,
+			})
 
-		abortSignal?.addEventListener('abort', () => {
-			this.#ws.send(
+			// Write request.
+			await writeWs(
+				this.#ws,
 				encodeFrame({
-					type: FrameType.CANCEL,
+					type: FrameType.REQUEST,
 					requestId: reqId,
+					request: {
+						m: req.method as HttpMethod,
+						u: url.pathname + url.search,
+						h: headers,
+					},
 				}),
 			)
 
-			req.body?.cancel(errAborted)
-			resBodyControl?.error(errAborted)
-			resProm?.reject(errAborted)
-		})
+			abortSignal?.addEventListener('abort', () => {
+				this.#ws.send(
+					encodeFrame({
+						type: FrameType.CANCEL,
+						requestId: reqId,
+					}),
+				)
 
-		// Write body, if any.
-		const body = req.body
-		if (body != null) {
-			const reader = body.getReader()
-			while (true) {
-				const buf = await reader.read()
-				if (buf.value != null) {
-					await writeWs(
-						this.#ws,
-						encodeFrame({
-							type: FrameType.BODY,
-							requestId: reqId,
-							body: buf.value,
-						}),
-					)
-				}
-				if (buf.done) {
-					break
+				req.body?.cancel(errAborted)
+				resBodyControl?.error(errAborted)
+				resProm?.reject(errAborted)
+			})
+
+			// Write body, if any.
+			let body = req.body
+			if (body === undefined) {
+				// Firefox doesn't support this.
+				// We have no choice but to buffer the body.
+				const [buf, controller] = newUnboundedBufferedReadableStream()
+				body = buf
+				const arrayBuf = await req.arrayBuffer()
+				controller.enqueue(new Uint8Array(arrayBuf))
+				controller.close()
+			}
+
+			if (body != null) {
+				const reader = body.getReader()
+				while (true) {
+					const buf = await reader.read()
+					if (buf.value != null) {
+						await writeWs(
+							this.#ws,
+							encodeFrame({
+								type: FrameType.BODY,
+								requestId: reqId,
+								body: buf.value,
+							}),
+						)
+					}
+					if (buf.done) {
+						break
+					}
 				}
 			}
+
+			// Finish request.
+			await writeWs(
+				this.#ws,
+				encodeFrame({
+					type: FrameType.END,
+					requestId: reqId,
+					end: {
+						t: [],
+					},
+				}),
+			)
+
+			return resProm.promise
+		} catch (err) {
+			// Request couldn't launch, remove it from pending.
+			this.#reqs.delete(reqId)
+			throw err
 		}
-
-		// Finish request.
-		await writeWs(
-			this.#ws,
-			encodeFrame({
-				type: FrameType.END,
-				requestId: reqId,
-				end: {
-					t: [],
-				},
-			}),
-		)
-
-		// Create pending request entry.
-		const [resBody, resBodyControl] = newUnboundedBufferedReadableStream()
-		const resProm = mkProm<Response>()
-		this.#reqs.set(reqId, {
-			resBody,
-			resBodyControl,
-			resProm,
-		})
-
-		return resProm.promise
 	}
 }

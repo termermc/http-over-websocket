@@ -248,10 +248,6 @@ func (h *Hows) handleReq(
 		_ = state.reqBodyReader.Close()
 		_ = state.reqBodyWriter.Close()
 
-		h.statesMu.Lock()
-		delete(h.states, frame.RequestId)
-		h.statesMu.Unlock()
-
 		// If we haven't sent headers yet, do that now.
 		state.WriteHeader(http.StatusNoContent)
 
@@ -263,7 +259,12 @@ func (h *Hows) handleReq(
 			},
 		})
 		_ = conn.Write(ctx, websocket.MessageBinary, endFrame)
+
 		ctxCancel(context.Canceled)
+
+		h.statesMu.Lock()
+		delete(h.states, frame.RequestId)
+		h.statesMu.Unlock()
 	}()
 }
 

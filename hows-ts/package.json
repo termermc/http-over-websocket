@@ -24,7 +24,8 @@
 		"check": "tsc --noEmit",
 		"build": "tsc",
 		"fmt": "prettier --write .",
-		"ci": "node --run fmt && node --run build && node --run test"
+		"ci": "node --run fmt && node --run build && node --run test",
+		"doPublish": "node --run ci && pnpm publish --access=public"
 	},
 	"devDependencies": {
 		"@types/node": "^26.1.2",

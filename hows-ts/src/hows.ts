@@ -18,7 +18,8 @@ type ReqState = {
 }
 
 const errWebSocketClosed = () => new Error('HoWS WebSocket closed')
-const errAborted = () => new DOMException('The operation was aborted', 'AbortError')
+const errAborted = () =>
+	new DOMException('The operation was aborted', 'AbortError')
 
 /**
  * An implementation of W3C fetch multiplexed using a WebSocket connection.
@@ -204,11 +205,11 @@ export class Hows {
 				)
 			}
 
-			if (!headers.find(([k]) => k.toLowerCase() === 'content-type') && bodyInfo.type != null) {
-				headers.push([
-					'content-type',
-					bodyInfo.type,
-				])
+			if (
+				!headers.find(([k]) => k.toLowerCase() === 'content-type') &&
+				bodyInfo.type != null
+			) {
+				headers.push(['content-type', bodyInfo.type])
 			}
 			headers.push(['content-length', bodyInfo.len.toString()])
 		}
@@ -242,7 +243,9 @@ export class Hows {
 				}),
 			)
 
-			let reqBody: ReadableStream<Uint8Array<ArrayBuffer>> | null | undefined = req.body
+			let reqBody:
+				ReadableStream<Uint8Array<ArrayBuffer>> | null | undefined =
+				req.body
 
 			abortSignal?.addEventListener('abort', () => {
 				this.#ws.send(
